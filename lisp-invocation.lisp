@@ -94,7 +94,7 @@
   :quit-format "(excl:exit ~A :quiet t)"
   :dump-format "(progn (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) (excl:dumplisp :name ~A :suppress-allegro-cl-banner t))")
 
-(define-lisp-implementation (:clozure :ccl) () ;; demand 1.4 or later.
+(define-lisp-implementation (:ccl :clozure) () ;; demand 1.4 or later.
   :fullname "Clozure Common Lisp"
   ;; formerly OpenMCL, forked from MCL, formerly Macintosh Common Lisp, nee Coral Common Lisp
   ;; Random note: (finish-output) is essential for ccl, that won't do it by default,
@@ -271,9 +271,10 @@
 	((asdf::os-unix-p) (format nil "./~A" n))
 	(t n)))))
 
-(defun lisp-environment-variable-name (&key (type (implementation-type)) prefix)
-  (if (eq prefix t) (setf prefix "X"))
-  (format nil "~@[~A~]~:@(~A~)" prefix type))
+(defun lisp-environment-variable-name (&key (type (implementation-type)) prefix suffix)
+  (when (eq prefix t) (setf prefix "X"))
+  (when (eq suffix t) (setf prefix "_OPTIONS"))
+  (format nil "~@[~A~]~:@(~A~)~@[~A~]" prefix type suffix))
 
 (defun lisp-invocation-arglist
     (&key (implementation-type (implementation-type))
@@ -291,12 +292,13 @@
       (get-lisp-implementation implementation-type)
     (append
      (when (or (null image-path) (not image-executable-p))
-       (list (or
-              (when (consp lisp-path) lisp-path)
-              (ensure-path-executable lisp-path)
-              (getenv (lisp-environment-variable-name
-                       :type implementation-type :prefix (when cross-compile "X")))
-              name)))
+       (ensure-list
+        (or
+         (when (consp lisp-path) lisp-path)
+         (ensure-path-executable lisp-path)
+         (getenv (lisp-environment-variable-name
+                  :type implementation-type :prefix (when cross-compile "X")))
+         name)))
      (when (and image-path (not image-executable-p))
        (list image-flag))
      (when image-path
