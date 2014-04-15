@@ -52,7 +52,7 @@
   `(apply 'register-lisp-implementation ',key ',keys))
 
 (defun register-lisp-implementation (key &rest keys)
-  (let* ((identifiers (if (consp key) key (list key)))
+  (let* ((identifiers (ensure-list key))
          (implementation (apply #'make-lisp-implementation :identifiers identifiers keys)))
     (dolist (id identifiers)
       (setf (gethash id *lisp-implementations*) implementation))))
@@ -272,9 +272,11 @@
 	(t n)))))
 
 (defun lisp-environment-variable-name (&key (type (implementation-type)) prefix suffix)
-  (when (eq prefix t) (setf prefix "X"))
-  (when (eq suffix t) (setf prefix "_OPTIONS"))
-  (format nil "~@[~A~]~:@(~A~)~@[~A~]" prefix type suffix))
+  (let* ((implementation (get-lisp-implementation type ))
+         (name (first (lisp-implementation-identifiers implementation))))
+    (when (eq prefix t) (setf prefix "X"))
+    (when (eq suffix t) (setf prefix "_OPTIONS"))
+    (format nil "~@[~A~]~:@(~A~)~@[~A~]" prefix name suffix)))
 
 (defun lisp-invocation-arglist
     (&key (implementation-type (implementation-type))
