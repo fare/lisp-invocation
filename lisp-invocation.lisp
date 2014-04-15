@@ -30,7 +30,7 @@
   "Dictionary of known Lisp implementations")
 
 (defstruct (lisp-implementation)
-  identifiers
+  identifiers ;; the first also names the environment variable for the lisp-path, as per cl-launch
   fullname
   name
   feature
@@ -285,7 +285,7 @@
        eval
        arguments
        debugger
-       (cross-compile t))
+       cross-compile)
   (with-slots (name flags disable-debugger load-flag eval-flag
 	       image-flag image-executable-p standalone-executable
 	       arguments-end argument-control)
@@ -296,8 +296,8 @@
         (or
          (when (consp lisp-path) lisp-path)
          (ensure-path-executable lisp-path)
-         (getenv (lisp-environment-variable-name
-                  :type implementation-type :prefix (when cross-compile "X")))
+         (getenvp (lisp-environment-variable-name
+                   :type implementation-type :prefix (when cross-compile "X")))
          name)))
      (when (and image-path (not image-executable-p))
        (list image-flag))
