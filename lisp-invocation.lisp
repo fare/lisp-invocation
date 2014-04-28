@@ -19,8 +19,10 @@
    #:lisp-implementation-argument-control
    #:lisp-implementation-disable-debugger
    #:lisp-implementation-directory-variable
+   #:lisp-implementation-invoker
    #:lisp-environment-variable-name
    #:lisp-invocation-arglist
+   #:invoke-lisp
    #:quit-form
    #:save-image-form))
 
@@ -45,6 +47,7 @@
   disable-debugger
   directory-variable
   ;; fasl-type cfasl-type
+  invoker
   quit-format
   dump-format)
 
@@ -186,13 +189,14 @@
   :feature :lispworks
   :flags ("-site-init" "-" "-init" "-")
   :eval-flag "-eval"
-  :load-flag "-load" ;; Is this what we want? See also -build as magic load.
+  :load-flag "-build" ;; Is -load what we want? See also -build as magic load.
   :arguments-end nil ; What's the deal with THIS? "--"
   :image-flag nil
   :image-executable-p t
   :standalone-executable t
   :argument-control t
   :disable-debugger ()
+  :invoker invoke-lisp-via-script
   :quit-format "(lispworks:quit :status ~A :confirm nil :return nil :ignore-errors-p t)"
   ;; when you dump, you may also have to (system::copy-file ".../lwlicense" (make-pathname :name "lwlicense" :type nil :defaults filename))
   :dump-format "(lispworks:deliver 'xcvb-driver:resume ~A 0 :interface nil)") ; "(hcl:save-image ~A :environment nil)"
@@ -316,13 +320,82 @@
      (mapcan (if load-flag
                  (lambda (x) (list load-flag (native-namestring x)))
                  (lambda (x) (list eval-flag (format nil "(load ~S)" (native-namestring x)))))
-             (if (listp load) load (list load)))
+             (ensure-list load))
      (when eval
        (list eval-flag eval))
      (when arguments
        (unless argument-control
 	 (error "Can't reliably pass arguments to Lisp implementation ~A" implementation-type))
        (cons arguments-end arguments)))))
+
+(defun lisp-invoker (&optional (implementation-type (implementation-type)))
+  (or (lisp-implementation-invoker (get-lisp-implementation implementation-type))
+      'invoke-lisp-directly))
+
+(defun invoke-lisp
+    (&rest keys
+     &key (implementation-type (implementation-type))
+       lisp-path
+       (lisp-flags :default)
+       image-path
+       load
+       eval
+       arguments
+       debugger
+       cross-compile
+       (run-program 'run-program)
+       run-program-args)
+  (declare (ignore lisp-path lisp-flags image-path load eval arguments debugger cross-compile
+                   run-program run-program-args))
+  (apply (lisp-invoker implementation-type)
+         keys))
+
+(defun invoke-lisp-directly
+    (&rest keys
+     &key (implementation-type (implementation-type))
+       lisp-path
+       (lisp-flags :default)
+       image-path
+       load
+       eval
+       arguments
+       debugger
+       cross-compile
+       (run-program 'run-program)
+       run-program-args)
+  (declare (ignore implementation-type lisp-path lisp-flags image-path
+                   load eval arguments debugger cross-compile))
+  (apply run-program
+         (apply 'lisp-invocation-arglist (remove-plist-keys '(:run-program :run-program-args) keys))
+         run-program-args))
+
+(defun invoke-lisp-via-script
+    (&rest keys
+     &key implementation-type
+       lisp-path
+       lisp-flags
+       image-path
+       load
+       eval
+       arguments
+       debugger
+       cross-compile
+       (run-program 'run-program)
+       run-program-args)
+  (declare (ignore implementation-type lisp-path lisp-flags image-path debugger cross-compile
+                   run-program run-program-args))
+  (with-temporary-file (:stream s :pathname p :type "lisp")
+    (when arguments
+      (format s "(unless (find-package :uiop/image) (defpackage :uiop/image (:use :cl)))~%~
+                 (defparameter uiop/image::*command-line-arguments* '~S)~%"
+              arguments))
+    (loop :for l :in (ensure-list load) :do (format s "(cl:load ~S)~%" l))
+    (format s "~@[~A~]~%" eval)
+    :close-stream
+    (apply 'invoke-lisp-directly
+           :load (native-namestring p)
+           (remove-plist-keys '(:load :eval) keys))))
+
 
 ;;; Avoiding use of a compiled-in driver in the build process
 
