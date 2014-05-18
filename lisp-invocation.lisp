@@ -4,6 +4,7 @@
 (defpackage :lisp-invocation
   (:use :cl :uiop)
   (:export
+   #:define-lisp-implementation
    #:get-lisp-implementation
    #:ensure-path-executable
    #:lisp-implementation-fullname
@@ -13,6 +14,7 @@
    #:lisp-implementation-eval-flag
    #:lisp-implementation-load-flag
    #:lisp-implementation-arguments-end
+   #:lisp-implementation-environment-variable
    #:lisp-implementation-image-flag
    #:lisp-implementation-image-executable-p
    #:lisp-implementation-standalone-executable
@@ -23,6 +25,7 @@
    #:lisp-environment-variable-name
    #:lisp-invocation-arglist
    #:invoke-lisp
+   #:register-lisp-implementation
    #:quit-form
    #:save-image-form))
 
@@ -36,6 +39,7 @@
   fullname
   name
   feature
+  environment-variable
   flags
   eval-flag
   load-flag
@@ -84,7 +88,7 @@
   :fullname "Allegro CL"
   :name "alisp"
   :feature :allegro
-  :flags ("-qq") ; on windows, +c ? On Allegro 5 and earlier, -Q and/or -QQ ?
+  :flags ("-qq") ; -q only ? on windows, +c ? On Allegro 5 and earlier, -Q and/or -QQ ?
   :eval-flag "-e"
   :load-flag "-L"
   ; :quit-flags ("-kill")
@@ -121,7 +125,7 @@
   :fullname "GNU CLISP"
   :name "clisp"
   :feature :clisp
-  :flags ("-norc" "--quiet" "--quiet")
+  :flags ("-norc" "--quiet" "--quiet" "-ansi" "-I")
   :eval-flag "-x"
   :load-flag "-i"
   :arguments-end "--"
@@ -169,9 +173,9 @@
   :quit-format "(si:quit ~A)"
   :dump-format nil) ;; Cannot dump with ECL. Link instead.
 
-(define-lisp-implementation :gcl () ;; Demand 2.7.0, if it is ever released. In ANSI mode.
+(define-lisp-implementation :gcl () ;; Demand 2.8.0, if it is ever released. In ANSI mode.
   :fullname "GNU Common Lisp"
-  :name "gcl" ;; we might export GCL_ANSI=t or something
+  :name "gcl" ;; On debian, we might have to export GCL_ANSI=t to ensure the ANSI variant is used.
   :feature :gcl
   :flags ()
   :eval-flag "-eval" ; -e
@@ -186,6 +190,15 @@
 (define-lisp-implementation (:lispworks :lw) ()
   :fullname "LispWorks"
   :name "lispworks" ;; This assumes you dumped a proper image for batch processing...
+  ;; If you have a licensed copy of lispworks,
+  ;; you can obtain the "lispworks" binary with, e.g.
+  ;; echo '(hcl:save-image "/lispworks" :environment nil)' > /tmp/build.lisp ;
+  ;; ./lispworks-6-0-0-x86-linux -siteinit - -init - -build /tmp/build.lisp
+  ;; Note that you also need to copy the license file to
+  ;; .../lispworks/lib/6-1-0-0/config/lwlicense
+  ;; and/or the same directory as your binary,
+  ;; for it to work on dumped binaries in all locations, with, e.g.
+  ;; (system::copy-file ".../lwlicense" (make-pathname :name "lwlicense" :type nil :defaults filename))
   :feature :lispworks
   :flags ("-site-init" "-" "-init" "-")
   :eval-flag "-eval"
@@ -198,7 +211,6 @@
   :disable-debugger ()
   :invoker invoke-lisp-via-script
   :quit-format "(lispworks:quit :status ~A :confirm nil :return nil :ignore-errors-p t)"
-  ;; when you dump, you may also have to (system::copy-file ".../lwlicense" (make-pathname :name "lwlicense" :type nil :defaults filename))
   :dump-format "(lispworks:deliver 'xcvb-driver:resume ~A 0 :interface nil)") ; "(hcl:save-image ~A :environment nil)"
 
 (define-lisp-implementation :lispworks-personal ()
@@ -256,7 +268,7 @@
   :fullname "XCL"
   :name "xcl"
   :feature :xcl
-  :flags ("--no-userinit")
+  :flags ("--no-userinit" "--no-siteinit" "--noinform")
   :eval-flag "--eval"
   :load-flag "--load"
   :arguments-end "--"
@@ -276,8 +288,9 @@
 	(t n)))))
 
 (defun lisp-environment-variable-name (&key (type (implementation-type)) prefix suffix)
-  (let* ((implementation (get-lisp-implementation type ))
-         (name (first (lisp-implementation-identifiers implementation))))
+  (let* ((implementation (get-lisp-implementation type))
+         (name (or (lisp-implementation-environment-variable implementation)
+                (first (lisp-implementation-identifiers implementation)))))
     (when (eq prefix t) (setf prefix "X"))
     (when (eq suffix t) (setf prefix "_OPTIONS"))
     (format nil "~@[~A~]~:@(~A~)~@[~A~]" prefix name suffix)))
