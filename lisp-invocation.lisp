@@ -121,6 +121,21 @@
   :quit-format "(let ((x ~A)) (finish-output *standard-output*) (finish-output *error-output*) (ccl:quit x))"
   :dump-format "(save-application ~S :prepend-kernel t)")
 
+(define-lisp-implementation :ecl () ;; Not actually tested
+  :fullname "CLASP"
+  :name "clasp"
+  :feature :clasp
+  :flags () ;; ("-norc")
+  :eval-flag "-eval" ; -e ???
+  :load-flag "-load"
+  :image-flag nil
+  :image-executable-p t
+  :arguments-end "--"
+  :argument-control t ;; must be fixed now, but double-checking needed.
+  :disable-debugger ()
+  :quit-format "(si:quit ~A)"
+  :dump-format nil) ;; Cannot dump with CLASP. Link instead.
+
 (define-lisp-implementation :clisp ()
   :fullname "GNU CLISP"
   :name "clisp"
