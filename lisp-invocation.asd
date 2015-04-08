@@ -17,6 +17,6 @@
   :long-description "lisp-invocation allows you to portably execute Lisp code
 as subprocesses of a current Lisp process.
 All known command-line accessible Common Lisp implementations are supported."
-  :version "1.0.2.1"
+  :version "1.0.3"
   :depends-on (#-asdf3.1 (:version "uiop" "3.1.2"))
   :components ((:file "lisp-invocation")))

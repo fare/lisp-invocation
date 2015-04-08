@@ -204,10 +204,10 @@
 
 (define-lisp-implementation (:lispworks :lw) ()
   :fullname "LispWorks"
-  :name "lispworks" ;; This assumes you dumped a proper image for batch processing...
+  :name "lispworks-console" ;; This assumes you dumped a proper image for batch processing...
   ;; If you have a licensed copy of lispworks,
   ;; you can obtain the "lispworks" binary with, e.g.
-  ;; echo '(hcl:save-image "/lispworks" :environment nil)' > /tmp/build.lisp ;
+  ;; echo '(hcl:save-image "lispworks-console" :environment nil)' > /tmp/build.lisp ;
   ;; ./lispworks-6-0-0-x86-linux -siteinit - -init - -build /tmp/build.lisp
   ;; Note that you also need to copy the license file to
   ;; .../lispworks/lib/6-1-0-0/config/lwlicense
