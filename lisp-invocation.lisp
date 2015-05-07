@@ -140,7 +140,7 @@
   :fullname "GNU CLISP"
   :name "clisp"
   :feature :clisp
-  :flags ("-norc" "--quiet" "--quiet" "-ansi" "-I")
+  :flags ("-norc" "--quiet" "--quiet" "-ansi") ;; don't use -I, for it induces extra prompt outputs.
   :eval-flag "-x"
   :load-flag "-i"
   :arguments-end "--"
