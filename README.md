@@ -19,8 +19,8 @@ and extract its output.
       (uiop:run-program
        (lisp-invocation:lisp-invocation-arglist
         :implementation-type impl
-        :eval (format nil "(progn (format t \"~~{~~31R~~^ ~~}~~%\" '~S) ~A)"
-                      '(595756 9556552524 643802 496307950)
+        :eval (format nil "(progn (format t ~S '~S) ~A)"
+                      "~{~31R~^ ~}~%" '(595756 9556552524 643802 496307950)
                       (lisp-invocation:quit-form :code 0 :implementation-type impl)))
        :output :string))
 
