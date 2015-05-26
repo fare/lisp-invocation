@@ -24,6 +24,13 @@ and extract its output.
                       (lisp-invocation:quit-form :code 0 :implementation-type impl)))
        :output :string))
 
+
+## Requirements
+
+`lisp-invocation` depends on ASDF 3.1.2 or later for its package-inferred-system,
+but you'd want it 3.1.2 anyway for its enhanced uiop:run-program.
+
+
 ## License
 
 Free Software available under an MIT-style license.
