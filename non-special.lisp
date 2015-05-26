@@ -59,11 +59,11 @@ or a LIST that specifies a program."
                 (sym (x) ;; print a symbol
                   ;; check that only good characters are used in a symbol;
                   ;; TODO: if not, go through a string (ugh!)
-                  (assert (every 'acceptable-eval-symbol-character-p (package-name (symbol-package x))))
-                  (assert (every 'acceptable-eval-symbol-character-p (symbol-name x)))
+                  (assert (every 'non-special-symbol-character-p (package-name (symbol-package x))))
+                  (assert (every 'non-special-symbol-character-p (symbol-name x)))
                   (w x))
                 (s (x) ;; form that evaluates into a string
-                   (if (every 'acceptable-eval-character-p x)
+                   (if (every 'non-special-character-p x)
                        (progn ;; simple string literal
                          (p "(string`") (print-string-in-pipes x s) (p ")"))
                        (progn
@@ -73,7 +73,7 @@ or a LIST that specifies a program."
                            :for start = 0 :then (if position (1+ position) end)
                            :for morep = (< start end)
                            :for position = (and morep
-                                                (position-if-not 'acceptable-eval-character-p x
+                                                (position-if-not 'non-special-character-p x
                                                                  :start start))
                            :while morep
                            :do (when (or (null position) (< start position))
