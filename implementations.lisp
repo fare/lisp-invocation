@@ -186,7 +186,7 @@ Not supported at all are:
   :standalone-executable t
   :argument-control t
   :disable-debugger ()
-  :invoker invoke-lisp-via-script
+  ;; :invoker invoke-lisp-via-script
   :quit-format "(lispworks:quit :status ~A :confirm nil :return nil :ignore-errors-p t)"
   :dump-format "(lispworks:deliver 'xcvb-driver:resume ~A 0 :interface nil)") ; "(hcl:save-image ~A :environment nil)"
 

@@ -25,7 +25,7 @@
    #:lisp-implementation-invoker
    #:lisp-environment-variable-name
    #:lisp-invocation-arglist
-   #:invoke-lisp
+   #:invoke-lisp #:invoke-lisp-directly #:invoke-lisp-via-script
    #:register-lisp-implementation
    #:register-lisp-implementation*
    #:quit-form
