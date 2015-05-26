@@ -1,7 +1,8 @@
 ;;; Lisp implementations
 #+xcvb (module (:build-depends-on ("/asdf")))
 
-(defpackage :lisp-invocation
+(uiop:define-package :lisp-invocation/lisp-invocation
+  (:nicknames :lisp-invocation)
   (:use :cl :uiop)
   (:export
    #:define-lisp-implementation
@@ -26,6 +27,7 @@
    #:lisp-invocation-arglist
    #:invoke-lisp
    #:register-lisp-implementation
+   #:register-lisp-implementation*
    #:quit-form
    #:save-image-form))
 
@@ -58,241 +60,25 @@
 (defmacro define-lisp-implementation (key () &rest keys)
   `(apply 'register-lisp-implementation ',key ',keys))
 
-(defun register-lisp-implementation (key &rest keys)
-  (let* ((identifiers (ensure-list key))
+(defun register-lisp-implementation (identifiers &rest keys)
+  "Register the lisp implementation identified by the IDENTIFIERS argument (a
+keyword or list of keywords), with given option KEYS."
+  (let* ((identifiers (ensure-list identifiers))
          (implementation (apply #'make-lisp-implementation :identifiers identifiers keys)))
     (dolist (id identifiers)
+      (assert (keywordp id))
       (setf (gethash id *lisp-implementations*) implementation))))
+
+(defun register-lisp-implementation* (x)
+  "Register the lisp implementation described by the list X, which consists of a name
+followed by a plist of keywords and arguments."
+  (apply 'register-lisp-implementation x))
+
+
 
 (defun get-lisp-implementation (&optional (implementation-type (implementation-type)))
   (or (gethash implementation-type *lisp-implementations*)
       (error "Unknown Lisp implementation type ~S" implementation-type)))
-
-(define-lisp-implementation :abcl ()
-  :fullname "Armed Bear Common Lisp"
-  :name "abcl"
-  :feature :abcl
-  :flags ("--noinform" "--noinit" "--nosystem")
-  :eval-flag "--eval"
-  :load-flag "--load"
-  :arguments-end "--"
-  :image-flag nil
-  :image-executable-p t
-  :standalone-executable nil
-  :argument-control t
-  :disable-debugger ("--batch") ;; ???
-  :quit-format "(ext:quit :status ~A)"
-  :dump-format nil)
-
-(define-lisp-implementation (:allegro :acl) ()
-  :fullname "Allegro CL"
-  :name "alisp"
-  :feature :allegro
-  :flags ("-qq") ; -q only ? on windows, +c ? On Allegro 5 and earlier, -Q and/or -QQ ?
-  :eval-flag "-e"
-  :load-flag "-L"
-  ; :quit-flags ("-kill")
-  :arguments-end "--"
-  :image-flag "-I"
-  :image-executable-p nil
-  :standalone-executable nil
-  :argument-control t
-  :disable-debugger ("-batch") ; see also -#D -#C -#!
-  :quit-format "(excl:exit ~A :quiet t)"
-  :dump-format "(progn (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) (excl:dumplisp :name ~A :suppress-allegro-cl-banner t))")
-
-(define-lisp-implementation (:ccl :clozure) () ;; demand 1.4 or later.
-  :fullname "Clozure Common Lisp"
-  ;; formerly OpenMCL, forked from MCL, formerly Macintosh Common Lisp, nee Coral Common Lisp
-  ;; Random note: (finish-output) is essential for ccl, that won't do it by default,
-  ;; unlike the other lisp implementations tested.
-  :name "ccl"
-  :feature :clozure
-  :flags ("--no-init" "--quiet")
-  :eval-flag "--eval" ; -e
-  :load-flag "--load"
-  :image-flag "--image-name" ; -I
-  :image-executable-p t
-  :standalone-executable t
-  :arguments-end "--"
-  :argument-control t ;; must be fixed now, but double-checking needed.
-  :disable-debugger ("--batch")
-  :directory-variable "CCL_DEFAULT_DIRECTORY"
-  :quit-format "(let ((x ~A)) (finish-output *standard-output*) (finish-output *error-output*) (ccl:quit x))"
-  :dump-format "(save-application ~S :prepend-kernel t)")
-
-(define-lisp-implementation :ecl () ;; Not actually tested
-  :fullname "CLASP"
-  :name "clasp"
-  :feature :clasp
-  :flags () ;; ("-norc")
-  :eval-flag "-eval" ; -e ???
-  :load-flag "-load"
-  :image-flag nil
-  :image-executable-p t
-  :arguments-end "--"
-  :argument-control t ;; must be fixed now, but double-checking needed.
-  :disable-debugger ()
-  :quit-format "(si:quit ~A)"
-  :dump-format nil) ;; Cannot dump with CLASP. Link instead.
-
-(define-lisp-implementation :clisp ()
-  :fullname "GNU CLISP"
-  :name "clisp"
-  :feature :clisp
-  :flags ("-norc" "--quiet" "--quiet" "-ansi") ;; don't use -I, for it induces extra prompt outputs.
-  :eval-flag "-x"
-  :load-flag "-i"
-  :arguments-end "--"
-  :image-executable-p t
-  :image-flag "-M"
-  :standalone-executable t ;; requires clisp 2.48 or later
-  :argument-control t ;; *BUT* even a standalone-executable always accepts --clisp-x and such.
-  :disable-debugger ("-on-error" "exit") ;; otherwise, -on-error debug
-  :quit-format "(ext:quit ~A)"
-  :dump-format "(ext:saveinitmem ~S :quiet t :executable t)")
-
-(define-lisp-implementation (:cmucl :cmu) ()
-  :fullname "CMU CL"
-  :name "cmucl"
-  :feature :cmu
-  :flags ("-quiet" "-noinit")
-  :eval-flag "-eval"
-  :load-flag "-load"
-  :arguments-end "--"
-  :image-executable-p t
-  :image-flag "-core"
-  :argument-control t
-  :disable-debugger ("-batch")
-  :quit-format "(unix:unix-exit ~A)"
-  :dump-format "(extensions:save-lisp ~S :executable t)")
-
-(define-lisp-implementation (:corman :cormanlisp) () ;; someone please add more complete support
-  :fullname "Corman Lisp"
-  :name () ;; There's a clconsole.exe, but what are the options?
-  :feature :cormanlisp
-  :quit-format "(win:exitprocess ~A)")
-
-(define-lisp-implementation :ecl () ;; demand 10.4.2 or later.
-  :fullname "Embeddable Common-Lisp"
-  :name "ecl"
-  :feature :ecl
-  :flags ("-norc")
-  :eval-flag "-eval" ; -e
-  :load-flag "-load"
-  :image-flag nil
-  :image-executable-p t
-  :arguments-end "--"
-  :argument-control t ;; must be fixed now, but double-checking needed.
-  :disable-debugger ()
-  :quit-format "(si:quit ~A)"
-  :dump-format nil) ;; Cannot dump with ECL. Link instead.
-
-(define-lisp-implementation :gcl () ;; Demand 2.8.0, if it is ever released. In ANSI mode.
-  :fullname "GNU Common Lisp"
-  :name "gcl" ;; On debian, we might have to export GCL_ANSI=t to ensure the ANSI variant is used.
-  :feature :gcl
-  :flags ()
-  :eval-flag "-eval" ; -e
-  :load-flag "-load"
-  :image-flag nil
-  :image-executable-p t
-  :arguments-end "--" ;; -f ?
-  :disable-debugger ("-batch")
-  :quit-format "(lisp:quit ~A)"
-  :dump-format "(progn (si::set-hole-size 500) (si::gbc nil) (si::sgc-on t) (si::save-system ~A))")
-
-(define-lisp-implementation (:lispworks :lw) ()
-  :fullname "LispWorks"
-  :name "lispworks-console" ;; This assumes you dumped a proper image for batch processing...
-  ;; If you have a licensed copy of lispworks,
-  ;; you can obtain the "lispworks" binary with, e.g.
-  ;; echo '(hcl:save-image "lispworks-console" :environment nil)' > /tmp/build.lisp ;
-  ;; ./lispworks-6-0-0-x86-linux -siteinit - -init - -build /tmp/build.lisp
-  ;; Note that you also need to copy the license file to
-  ;; .../lispworks/lib/6-1-0-0/config/lwlicense
-  ;; and/or the same directory as your binary,
-  ;; for it to work on dumped binaries in all locations, with, e.g.
-  ;; (system::copy-file ".../lwlicense" (make-pathname :name "lwlicense" :type nil :defaults filename))
-  :feature :lispworks
-  :flags ("-site-init" "-" "-init" "-")
-  :eval-flag "-eval"
-  :load-flag "-build" ;; Is -load what we want? See also -build as magic load.
-  :arguments-end nil ; What's the deal with THIS? "--"
-  :image-flag nil
-  :image-executable-p t
-  :standalone-executable t
-  :argument-control t
-  :disable-debugger ()
-  :invoker invoke-lisp-via-script
-  :quit-format "(lispworks:quit :status ~A :confirm nil :return nil :ignore-errors-p t)"
-  :dump-format "(lispworks:deliver 'xcvb-driver:resume ~A 0 :interface nil)") ; "(hcl:save-image ~A :environment nil)"
-
-(define-lisp-implementation :lispworks-personal ()
-  :fullname "LispWorks Personal Edition"
-  :name () ;; In LispWorks Personal, the slave worker executes you!
-  :feature :lispworks-personal-edition)
-
-(define-lisp-implementation :mkcl ()
-  :fullname "ManKai Common-Lisp"
-  :name "mkcl"
-  :feature :mkcl
-  :flags ("-norc")
-  :eval-flag "-eval" ; -e
-  :load-flag "-load"
-  :image-flag nil
-  :image-executable-p t
-  :arguments-end "--"
-  :argument-control t ;; must be fixed now, but double-checking needed.
-  :disable-debugger ()
-  :quit-format "(mk-ext:quit :exit-code ~A)"
-  :dump-format nil) ;; Cannot dump with ECL. Link instead.
-
-(define-lisp-implementation :sbcl ()
-  :fullname "Steel Bank Common Lisp"
-  :name "sbcl"
-  :feature :sbcl
-  :flags ("--noinform" "--no-userinit" "--no-sysinit") ;; minimize non-determinism form user's env
-  :eval-flag "--eval" ;; Note: SBCL's eval can only handle one form per argument.
-  :load-flag "--load"
-  :arguments-end "--end-toplevel-options"
-  :image-flag "--core"
-  :image-executable-p t
-  :standalone-executable t ;; requires sbcl 1.0.21.24 or later.
-  :argument-control t
-  :disable-debugger ("--disable-debugger")
-  :directory-variable "SBCL_HOME"
-  :quit-format "(let ((exit (find-symbol \"EXIT\" :sb-ext)) (quit (find-symbol \"QUIT\" :sb-ext)) (code ~A)) (cond (exit (funcall exit :code code)) (quit (funcall quit :unix-status code))))"
-  :dump-format "(sb-ext:save-lisp-and-die ~S :executable t)")
-
-(define-lisp-implementation :scl ()
-  :fullname "Scieneer Common Lisp" ; use 1.3.9 or later
-  :name "scl"
-  :feature :scl
-  :flags ("-quiet" "-noinit")
-  :eval-flag "-eval"
-  :load-flag "-load"
-  :arguments-end "--"
-  :image-flag "-core"
-  :argument-control nil ;; cmucl will always scan all the arguments for -eval... EVIL!
-  :disable-debugger ("-batch")
-  :quit-format "(unix:unix-exit ~A)"
-  :dump-format "(extensions:save-lisp ~S)")
-
-(define-lisp-implementation :xcl ()
-  :fullname "XCL"
-  :name "xcl"
-  :feature :xcl
-  :flags ("--no-userinit" "--no-siteinit" "--noinform")
-  :eval-flag "--eval"
-  :load-flag "--load"
-  :arguments-end "--"
-  :image-flag nil
-  :image-executable-p nil
-  :standalone-executable nil
-  :disable-debugger ()
-  :quit-format "(ext:quit :status ~A)"
-  :dump-format nil)
 
 (defun ensure-path-executable (x)
   (when x

@@ -9,7 +9,11 @@
 ;;;                                                                  ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defsystem :lisp-invocation
+(unless (or #+asdf3.1 (version<= "3.1.2" (asdf-version)))
+  (error "ASDF 3.1.2 required"))
+
+(defsystem "lisp-invocation"
+  :version "1.0.5"
   :author ("Francois-Rene Rideau")
   :maintainer "Francois-Rene Rideau"
   :licence "MIT"
@@ -17,6 +21,11 @@
   :long-description "lisp-invocation allows you to portably execute Lisp code
 as subprocesses of a current Lisp process.
 All known command-line accessible Common Lisp implementations are supported."
-  :version "1.0.4"
-  :depends-on (#-asdf3.1 (:version "uiop" "3.1.2"))
-  :components ((:file "lisp-invocation")))
+  :class package-inferred-system
+  :depends-on ("lisp-invocation/lisp-invocation" "lisp-invocation/implementations"))
+
+(defsystem "lisp-invocation/all"
+  :version (:read-file-form "lisp-invocation.asd" :at (1 3))
+  :depends-on ("lisp-invocation"
+               "lisp-invocation/non-special"
+               "lisp-invocation/allegro-variants"))
