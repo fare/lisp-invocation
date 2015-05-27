@@ -170,23 +170,32 @@ Not supported at all are:
   ;; If you have a licensed copy of lispworks,
   ;; you can obtain the "lispworks" binary with, e.g.
   ;; echo '(hcl:save-image "lispworks-console" :environment nil)' > /tmp/build.lisp ;
-  ;; ./lispworks-6-0-0-x86-linux -siteinit - -init - -build /tmp/build.lisp
+  ;; ./lispworks-7-0-0-x86-linux -siteinit - -init - -build /tmp/build.lisp
   ;; Note that you also need to copy the license file to
-  ;; .../lispworks/lib/6-1-0-0/config/lwlicense
+  ;; .../lispworks/lib/7-0-0-0/config/lwlicense
   ;; and/or the same directory as your binary,
   ;; for it to work on dumped binaries in all locations, with, e.g.
   ;; (system::copy-file ".../lwlicense" (make-pathname :name "lwlicense" :type nil :defaults filename))
   :feature :lispworks
   :flags ("-site-init" "-" "-init" "-")
-  :eval-flag "-eval"
-  :load-flag "-build" ;; Is -load what we want? See also -build as magic load.
-  :arguments-end nil ; What's the deal with THIS? "--"
+  ;; As of 7.0.0, LispWorks (still) fails to stop processing arguments with "--" or any marker.
+  ;; http://www.lispworks.com/documentation/lw70/LW/html/lw-203.htm
+  ;; Therefore we can't "just" tuck arguments at the end of a command-line, and instead we use
+  ;; exec_lisp_file to create a script that initializes arguments and pass that to LispWorks.
+  ;; Since we don't use -eval, we use -build instead of -load to load the script. LispWorks
+  ;; calls all the -eval and -load in order, then the -siteinit, -init and finally -build.
+  ;; Note that we don't use -build, and so if you don't quit as part of your -eval and -load,
+  ;; then LispWorks will load the site and user init files then start graphical environment.
+  ;; This is probably not what a portable Lisp program using lisp-invocation wants;
+  ;; but then again, such program is responsible for quitting as part of eval and load forms.
+  :eval-flag "-eval" :load-flag "-load"
+  :arguments-end nil ;; Unhappily, there is no end of arguments marker for LispWorks,
+  :invoker invoke-lisp-via-script ;; so we use this invoker kludge.
   :image-flag nil
   :image-executable-p t
   :standalone-executable t
   :argument-control t
   :disable-debugger ()
-  ;; :invoker invoke-lisp-via-script
   :quit-format "(lispworks:quit :status ~A :confirm nil :return nil :ignore-errors-p t)"
   :dump-format "(lispworks:deliver 'xcvb-driver:resume ~A 0 :interface nil)") ; "(hcl:save-image ~A :environment nil)"
 
