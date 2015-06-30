@@ -37,7 +37,7 @@ REGISTER-LISP-IMPLEMENTATION."
                      :fullname ,fullname
                      :name ,(native-namestring (subpathname dir executable))
                      :feature :allegro ;; do we want a more discriminating feature expression?
-                     :flags '("-qq")
+                     :flags ("-qq")
                      :eval-flag "-e"
                      :load-flag "-L"
                      ;; :quit-flags ("-kill")

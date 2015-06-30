@@ -32,7 +32,7 @@ Not supported at all are:
 
 (define-lisp-implementation (:allegro :acl) ()
   :fullname "Allegro CL"
-  :name "alisp"
+  :name "alisp" ;; on Windows, you might prefer the Win32 console application build.exe, which seems to be an mlisp variant ("modern" syntax)
   :feature :allegro
   :flags ("-qq") ; -q only ? on windows, +c ? On Allegro 5 and earlier, -Q and/or -QQ ?
   :eval-flag "-e"

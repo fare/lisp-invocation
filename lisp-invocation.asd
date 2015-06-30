@@ -13,7 +13,7 @@
   (error "ASDF 3.1.2 required"))
 
 (defsystem "lisp-invocation"
-  :version "1.0.8"
+  :version "1.0.9"
   :author ("Francois-Rene Rideau")
   :maintainer "Francois-Rene Rideau"
   :licence "MIT"
