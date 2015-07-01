@@ -1,3 +1,4 @@
+;; Composing command lines that don't use any special character.
 (defpackage :lisp-invocation/non-special
   (:use :common-lisp :uiop)
   (:export

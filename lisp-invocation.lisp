@@ -48,6 +48,7 @@
   arguments-end
   image-flag
   image-executable-p
+  default-image
   standalone-executable
   argument-control
   disable-debugger
@@ -100,16 +101,17 @@ followed by a plist of keywords and arguments."
     (&key (implementation-type (implementation-type))
        lisp-path
        (lisp-flags :default)
-       image-path
+       (image-path nil image-path-p)
        load
        eval
        arguments
        debugger
        cross-compile)
   (with-slots (name flags disable-debugger load-flag eval-flag
-	       image-flag image-executable-p standalone-executable
+	       image-flag default-image image-executable-p standalone-executable
 	       arguments-end argument-control)
       (get-lisp-implementation implementation-type)
+    (unless image-path-p (setf image-path default-image))
     (append
      (when (or (null image-path) (not image-executable-p))
        (ensure-list

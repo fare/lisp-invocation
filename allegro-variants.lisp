@@ -19,8 +19,12 @@ locations, you may simply specify the Allegro install directories using these va
   "Return a list of possible Allegro variants based on built-in information
 and environment variables.  The returned list is made up of argument lists for
 REGISTER-LISP-IMPLEMENTATION."
+  ;; Beware that on Windows, we use the non-multithreaded console application build.exe
+  ;; so that we may have console I/O on the existing stdin and stdout, that we may capture.
   (while-collecting (c)
-    (loop :for (smpvar smpname smpfullname) :in `(("" "" "") ("S" :_s " (SMP)")) :do
+    (loop
+      :with windowsp = (os-windows-p)
+      :for (smpvar smpname smpfullname) :in `(("" "" "") ("S" :_s " (SMP)")) :do
       (loop
         :for (bitsvar bitsname bitsfullname) :in '(("" "" "") ("64" "_64" " (64-bit words)"))
         :for dirvar = (format nil "~:@(ALLEGRO~A~A~)" bitsvar smpvar)
@@ -33,9 +37,14 @@ REGISTER-LISP-IMPLEMENTATION."
               :for fullname = (strcat "Allegro CL"
                                       casefullname charfullname bitsfullname smpfullname)
               :for executable = (format nil "~(~alisp~a~)" caseexe charname) :do
+              :for (exepath imgpath) = (if windowsp
+                                           (list (subpathname dir (if (emptyp charfullname) "buildi.exe" "build.exe"))
+                                                 (subpathname dir executable :type "dxl"))
+                                           (list (subpathname dir executable) nil))
                 (c `(,allegro-variant
                      :fullname ,fullname
-                     :name ,(native-namestring (subpathname dir executable))
+                     :name ,(native-namestring exepath)
+                     :default-image ,(native-namestring imgpath)
                      :feature :allegro ;; do we want a more discriminating feature expression?
                      :flags ("-qq")
                      :eval-flag "-e"
@@ -46,10 +55,7 @@ REGISTER-LISP-IMPLEMENTATION."
                      :image-executable-p nil
                      :standalone-executable nil
                      :argument-control t
-                     :disable-debugger ("-batch" ; see also -#D -#C -#!
-                                        ,@(when (and (os-windows-p)
-                                                     (not (getenvp "ALLEGRO_NOISY")))
-                                            '("+c")))
+                     :disable-debugger ("-batch") ; see also -#D -#C -#!
                      :quit-format "(excl:exit ~A :quiet t)"
                      :dump-format "(progn (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) (excl:dumplisp :name ~A :suppress-allegro-cl-banner t))"))))))))
 
