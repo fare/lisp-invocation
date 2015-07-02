@@ -36,11 +36,11 @@ REGISTER-LISP-IMPLEMENTATION."
               :for allegro-variant = (conc-keyword :allegro casename charname bitsname smpname)
               :for fullname = (strcat "Allegro CL"
                                       casefullname charfullname bitsfullname smpfullname)
-              :for executable = (format nil "~(~alisp~a~)" caseexe charname) :do
+              :for executable = (format nil "~(~alisp~a~)" caseexe charname)
               :for (exepath imgpath) = (if windowsp
                                            (list (subpathname dir (if (emptyp charfullname) "buildi.exe" "build.exe"))
                                                  (subpathname dir executable :type "dxl"))
-                                           (list (subpathname dir executable) nil))
+                                           (list (subpathname dir executable) nil)) :do
                 (c `(,allegro-variant
                      :fullname ,fullname
                      :name ,(native-namestring exepath)
