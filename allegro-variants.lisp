@@ -1,5 +1,6 @@
 (defpackage :lisp-invocation/allegro-variants
-  (:use :common-lisp :fare-utils :uiop :lisp-invocation/lisp-invocation))
+  (:use :common-lisp :fare-utils :uiop :lisp-invocation/lisp-invocation)
+  (:export #:all-allegro-variants))
 
 (in-package :lisp-invocation/allegro-variants)
 
