@@ -1,6 +1,6 @@
 (defpackage :lisp-invocation/allegro-variants
   (:use :common-lisp :fare-utils :uiop :lisp-invocation/lisp-invocation)
-  (:export #:all-allegro-variants))
+  (:export #:all-allegro-variants #:current-lisp-variant))
 
 (in-package :lisp-invocation/allegro-variants)
 
@@ -28,7 +28,7 @@ REGISTER-LISP-IMPLEMENTATION."
       :for (smpvar smpname smpfullname) :in `(("" "" "") ("S" :_s " (SMP)")) :do
       (loop
         :for (bitsvar bitsname bitsfullname) :in '(("" "" "") ("64" "_64" " (64-bit words)"))
-        :for dirvar = (format nil "~:@(ALLEGRO~A~A~)" bitsvar smpvar)
+        :for dirvar = (format nil "~:@(ALLEGRO~A~ADIR~)" bitsvar smpvar)
         :for dir = (getenv-pathname dirvar :want-absolute t :ensure-directory t) :do
           (loop :for (charname charfullname) :in '(("" "") ("8" " (8-bit chars)")) :do
             (loop
@@ -59,5 +59,30 @@ REGISTER-LISP-IMPLEMENTATION."
                      :disable-debugger ("-batch") ; see also -#D -#C -#!
                      :quit-format "(excl:exit ~A :quiet t)"
                      :dump-format "(progn (sys:resize-areas :global-gc t :pack-heap t :sift-old-areas t :tenure t) (excl:dumplisp :name ~A :suppress-allegro-cl-banner t))"))))))))
+
+
+(defun current-lisp-variant ()
+  (let ((type (implementation-type)))
+    (case type
+      (:acl
+       (conc-keyword
+        :allegro
+        ;; I would have liked to make it depend only on the rebindable *features*, but there's
+        ;; nothing in Allegro's *features* for case sensitivity, though there is for :ICS support.
+        #+allegro (when (eq excl:*current-case-mode* :case-sensitive-lower) :modern)
+        (unless (featurep :ics) "8") ;; in uiop/os, we use: (excl:ics-target-case (:-ics "8"))
+        (when (featurep :64bit) "_64")
+        (when (featurep :smp) :_s)))
+      (:ecl
+       (if (featurep :ecl-bytecmp)
+           :ecl_bytecodes
+           :ecl))
+      ;; Unshorten some aliases
+      (:cmu :cmucl)
+      (:lwpe :lispworks-personal-edition)
+      (:lw :lispworks)
+      (:smbx :symbolics)
+      (otherwise
+       type))))
 
 (map () 'register-lisp-implementation* (all-allegro-variants))
