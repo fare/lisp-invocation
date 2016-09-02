@@ -71,9 +71,9 @@ Not supported at all are:
   :fullname "CLASP"
   :name "clasp"
   :feature :clasp
-  :flags () ;; ("-norc")
-  :eval-flag "-eval" ; -e ???
-  :load-flag "-load"
+  :flags ("--norc" "--noinit")
+  :eval-flag "--eval"
+  :load-flag "--load" ;; ???
   :image-flag nil
   :image-executable-p t
   :arguments-end "--"
